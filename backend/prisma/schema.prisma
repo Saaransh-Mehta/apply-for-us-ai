@@ -8,13 +8,35 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  clerkId    String   @unique
-  email      String   @unique
-  fullname   String?
-  isProUser  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String       @id @default(cuid())
+  clerkId     String       @unique
+  email       String       @unique
+  fullname    String?
+  isProUser   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  UserProfile UserProfile?
+}
+
+model UserProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  resumeUrl    String?
+  parsedResume Json?
+
   skills     Json?
-  Experience Json?
+  experience Json?
+  education  Json?
+  projects   Json?
+  summary    String?
+
+  preferredRole     String?
+  preferredLocation String?
+  expectedSalary    Int?
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -12,6 +12,13 @@ const Pricing = () => {
     const {isSignedIn,user} = useUser()
     const username = user?.fullName || 'User'
 
+    const handleUpgrade = (tier: string) => {
+        // Store tier in localStorage (in real app, would update database)
+        localStorage.setItem("userTier", tier)
+        alert(`Successfully upgraded to ${tier} tier! (Demo mode - no payment processed)`)
+        navigate("/dashboard")
+    }
+
 
   return (
     <>
@@ -52,7 +59,7 @@ const Pricing = () => {
                         </div>
                         <p className="text-sm text-gray-600 outline-font">Perfect for trying out the platform</p>
                     </div>
-                    <Button variant="outline" className="w-full mb-6 outline-font">Get Started</Button>
+                    <Button variant="outline" className="w-full mb-6 outline-font" onClick={() => navigate('/dashboard')}>Current Plan</Button>
                     <div className="features space-y-3">
                         <div className="feature-item flex items-start gap-3">
                             <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
@@ -92,7 +99,7 @@ const Pricing = () => {
                         </div>
                         <p className="text-sm text-gray-600 outline-font">For serious job seekers</p>
                     </div>
-                    <Button className="w-full mb-6 outline-font">Get Started</Button>
+                    <Button className="w-full mb-6 outline-font" onClick={() => handleUpgrade('pro')}>Upgrade to Pro</Button>
                     <div className="features space-y-3">
                         <div className="feature-item flex items-start gap-3">
                             <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
@@ -133,7 +140,7 @@ const Pricing = () => {
                         </div>
                         <p className="text-sm text-gray-600 outline-font">For power users & agencies</p>
                     </div>
-                    <Button variant="outline" className="w-full mb-6 outline-font">Get Started</Button>
+                    <Button variant="outline" className="w-full mb-6 outline-font" onClick={() => handleUpgrade('pro-plus')}>Upgrade to Pro Plus</Button>
                     <div className="features space-y-3">
                         <div className="feature-item flex items-start gap-3">
                             <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />

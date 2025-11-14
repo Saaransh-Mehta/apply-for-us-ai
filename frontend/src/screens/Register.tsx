@@ -35,7 +35,7 @@ const Register = () => {
             <div className="max-w-md w-full bg-white border border-gray-100 rounded-xl shadow-md p-8">
               <h2 className="text-2xl font-semibold mb-4 outline-font">Sign up</h2>
               {/* Clerk SignUp component handles the flow; wrapped to match site styling */}
-              <SignUp redirectUrl="/dashboard" signInUrl='/login' />
+              <SignUp redirectUrl="/resume-upload" signInUrl='/login' />
             </div>
           </div>
         </div>

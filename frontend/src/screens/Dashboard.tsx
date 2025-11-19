@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { useUser } from "@clerk/clerk-react"
+import { useUser, UserButton } from "@clerk/clerk-react"
 import { 
   LayoutDashboard, 
   FileText, 
@@ -186,10 +186,28 @@ const Dashboard = () => {
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <h1 className="text-lg font-semibold outline-font">Dashboard</h1>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 justify-between">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <h1 className="text-lg font-semibold outline-font">Dashboard</h1>
+          </div>
+          
+          {/* User Profile Section with Clerk UserButton */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600 outline-font hidden sm:block">
+              {user?.primaryEmailAddress?.emailAddress}
+            </span>
+            <UserButton 
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "w-10 h-10",
+                  userButtonPopoverCard: "shadow-lg",
+                }
+              }}
+            />
+          </div>
         </header>
 
         <div className="flex-1 p-6 bg-gray-50">

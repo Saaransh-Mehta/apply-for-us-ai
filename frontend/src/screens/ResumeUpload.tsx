@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useUser } from "@clerk/clerk-react"
+import axios from "axios"
 
 const ResumeUpload = () => {
   const [resumeUrl, setResumeUrl] = useState("")
@@ -17,8 +18,8 @@ const ResumeUpload = () => {
     const file = e.target.files?.[0]
     if (file && file.type === "application/pdf") {
       setUploadedFile(file)
-      // In a real app, you'd upload to a server here
-      // For now, we'll just use the file name
+
+      
       console.log("File selected:", file.name)
     } else {
       alert("Please upload a PDF file")
@@ -33,19 +34,38 @@ const ResumeUpload = () => {
 
     setIsUploading(true)
     
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    // Store resume status in localStorage (in real app, this would be in database)
-    localStorage.setItem("hasResume", "true")
-    if (resumeUrl) {
-      localStorage.setItem("resumeUrl", resumeUrl)
+    try {
+      if (uploadedFile) {
+        const formData = new FormData()
+        formData.append('file', uploadedFile)
+        
+        const responseOfUploadedFile = await axios.post('http://localhost:3000/parser', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        console.log("Response from server:", responseOfUploadedFile.data)
+        
+        if (responseOfUploadedFile.data.success) {
+          localStorage.setItem("resumeAnalysis", JSON.stringify(responseOfUploadedFile.data.data))
+          localStorage.setItem("hasResume", "true")
+          navigate("/browse-jobs")
+        }
+      }
+      
+      if (resumeUrl) {
+        localStorage.setItem("resumeUrl", resumeUrl)
+      }
+      
+      setIsUploading(false)
+      
+      // Navigate to dashboard
+      navigate("/dashboard")
+    } catch (error) {
+      console.error("Error uploading resume:", error)
+      alert("Failed to upload resume. Please try again.")
+      setIsUploading(false)
     }
-    
-    setIsUploading(false)
-    
-    // Navigate to dashboard
-    navigate("/dashboard")
   }
 
   const handleSkip = () => {

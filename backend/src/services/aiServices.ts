@@ -1,171 +1,109 @@
- import { Injectable } from '@nestjs/common';
-import { Cohere } from '@langchain/cohere';
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { z } from "zod";
 import 'dotenv/config';
 
-export interface ResumeAnalysis {
-    personalInfo: {
-        name: string;
-        email: string;
-        phone: string;
-        location: string;
-        linkedin: string;
-        portfolio: string;
-    };
-    professionalSummary: string;
-    skills: {
-        technical: string[];
-        soft: string[];
-        tools: string[];
-        languages: string[];
-    };
-    experience: Array<{
-        title: string;
-        company: string;
-        location: string;
-        duration: string;
-        responsibilities: string[];
-        achievements: string[];
-    }>;
-    education: Array<{
-        degree: string;
-        institution: string;
-        year: string;
-        gpa: string;
-        relevantCourses: string[];
-    }>;
-    projects: Array<{
-        name: string;
-        description: string;
-        technologies: string[];
-        link: string;
-    }>;
-    certifications: string[];
-    achievements: string[];
-    strengths: string[];
-    weaknesses: string[];
-    suggestedImprovements: string[];
-    overallScore: number;
-}
+const ResumeSchema = z.object({
+    personalInfo: z.object({
+        name: z.string().describe("Full name of the candidate"),
+        email: z.string().describe("Email address"),
+        phone: z.string().describe("Phone number"),
+        location: z.string().describe("City, State or Country"),
+        linkedin: z.string().optional().describe("LinkedIn profile URL"),
+        portfolio: z.string().optional().describe("Portfolio or personal website URL"),
+        github: z.string().optional().describe("GitHub profile URL")
+    }),
+    professionalSummary: z.string().describe("A concise 2-3 sentence professional summary"),
+    skills: z.object({
+        technical: z.array(z.string()).describe("Technical skills (programming languages, frameworks)"),
+        soft: z.array(z.string()).describe("Soft skills (communication, leadership, etc.)"),
+        tools: z.array(z.string()).describe("Tools and platforms (AWS, Docker, Git, etc.)"),
+        languages: z.array(z.string()).describe("Programming languages")
+    }),
+    experience: z.array(z.object({
+        title: z.string().describe("Job title"),
+        company: z.string().describe("Company name"),
+        location: z.string().describe("Job location"),
+        duration: z.string().describe("Duration (e.g., Jan 2020 - Present)"),
+        responsibilities: z.array(z.string()).describe("Key responsibilities and duties"),
+        achievements: z.array(z.string()).describe("Notable achievements and accomplishments")
+    })),
+    education: z.array(z.object({
+        degree: z.string().describe("Degree name (e.g., B.S. Computer Science)"),
+        institution: z.string().describe("University or institution name"),
+        year: z.string().describe("Graduation year or duration"),
+        gpa: z.string().optional().describe("GPA if mentioned"),
+        relevantCourses: z.array(z.string()).describe("Relevant courses if mentioned")
+    })),
+    projects: z.array(z.object({
+        name: z.string().describe("Project name"),
+        description: z.string().describe("Brief description of the project"),
+        technologies: z.array(z.string()).describe("Technologies and tools used"),
+        link: z.string().optional().describe("Project link (GitHub, live demo, etc.)")
+    })),
+    certifications: z.array(z.string()).describe("Professional certifications"),
+    achievements: z.array(z.string()).describe("Awards, honors, or notable achievements"),
+    strengths: z.array(z.string()).describe("Key strengths identified from the resume"),
+    areasForImprovement: z.array(z.string()).describe("Suggestions to improve the resume"),
+    overallScore: z.number().min(0).max(100).describe("Overall resume quality score (0-100)")
+});
 
- export const  analyzeResume = async(resumeText: string): Promise<ResumeAnalysis> =>{
-        const llm = new Cohere({
-            apiKey: process.env.COHERE_API_KEY,
-            model: 'command-r-plus',
-        });
+export type ResumeAnalysis = z.infer<typeof ResumeSchema>;
 
-        const prompt = `You are an expert resume analyzer and career counselor. Analyze the following resume text and extract ALL relevant information into a structured JSON format.
+const llm = new ChatGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_API_KEY,
+    model: 'gemini-2.0-flash',
+    temperature: 0
+});
+
+const structuredLLM = llm.withStructuredOutput(ResumeSchema, {
+    name: "resume_analysis"
+});
+
+export const analyzeParsedText = async (parsedData: string): Promise<ResumeAnalysis> => {
+    const systemPrompt = `You are an expert resume analyzer and career counselor with years of experience in recruitment and talent acquisition.
+
+Your task is to thoroughly analyze the provided resume text and extract ALL relevant information into the structured format.
+
+IMPORTANT INSTRUCTIONS:
+1. Extract personal information accurately (name, email, phone, location, LinkedIn, portfolio, GitHub)
+2. Generate a compelling professional summary that highlights the candidate's key strengths
+3. Categorize skills properly:
+   - Technical skills: Programming languages, frameworks, databases
+   - Soft skills: Communication, leadership, teamwork, problem-solving
+   - Tools: Development tools, cloud platforms, version control
+   - Languages: Specific programming languages
+4. Extract complete work experience with all details
+5. List education with all available information
+6. Identify projects with technologies used
+7. List all certifications and achievements
+8. Analyze strengths based on the resume content
+9. Provide 3-5 actionable suggestions to improve the resume
+10. Calculate an overall score (0-100) based on:
+    - Completeness of information (30%)
+    - Clarity and formatting (20%)
+    - Impact and achievements (25%)
+    - Skills relevance (15%)
+    - Professional presentation (10%)
+
+If any field is not found in the resume, use empty string "" for strings or empty array [] for arrays.
+Be thorough and extract as much detail as possible.`;
+
+    const humanPrompt = `Analyze the following resume text and extract all information in the structured JSON format:
 
 RESUME TEXT:
-${resumeText}
+${parsedData}
 
-INSTRUCTIONS:
-1. Extract personal information (name, email, phone, location, LinkedIn, portfolio/website)
-2. Generate a concise professional summary (2-3 sentences)
-3. Categorize skills into: technical skills, soft skills, tools/frameworks, and programming languages
-4. Extract work experience with title, company, location, duration, key responsibilities, and achievements
-5. Extract education details including degree, institution, graduation year, GPA (if mentioned), and relevant courses
-6. Identify projects with name, description, technologies used, and links
-7. List certifications and achievements
-8. Analyze strengths and areas for improvement
-9. Provide 3-5 actionable suggestions to improve the resume
-10. Give an overall resume score out of 100 based on completeness, clarity, and impact
+Please provide a complete and detailed analysis.`;
 
-IMPORTANT: 
-- If information is not available, use empty string "" or empty array []
-- Be thorough and extract as much detail as possible
-- Ensure all JSON keys match the exact structure shown below
+    try {
+        const response = await structuredLLM.invoke([
+            ["system", systemPrompt],
+            ["human", humanPrompt]
+        ]);
 
-Return ONLY valid JSON in this EXACT structure:
-{
-  "personalInfo": {
-    "name": "",
-    "email": "",
-    "phone": "",
-    "location": "",
-    "linkedin": "",
-    "portfolio": ""
-  },
-  "professionalSummary": "",
-  "skills": {
-    "technical": [],
-    "soft": [],
-    "tools": [],
-    "languages": []
-  },
-  "experience": [
-    {
-      "title": "",
-      "company": "",
-      "location": "",
-      "duration": "",
-      "responsibilities": [],
-      "achievements": []
+        return response as ResumeAnalysis;
+    } catch (error) {
+        console.error("Error in analyzeParsedText:", error);
+        throw new Error(`Failed to analyze resume: ${error.message}`);
     }
-  ],
-  "education": [
-    {
-      "degree": "",
-      "institution": "",
-      "year": "",
-      "gpa": "",
-      "relevantCourses": []
-    }
-  ],
-  "projects": [
-    {
-      "name": "",
-      "description": "",
-      "technologies": [],
-      "link": ""
-    }
-  ],
-  "certifications": [],
-  "achievements": [],
-  "strengths": [],
-  "weaknesses": [],
-  "suggestedImprovements": [],
-  "overallScore": 0
-}
-
-ANALYZE THE RESUME NOW:`;
-
-        const response = await llm.invoke(prompt);
-
-        try {
-            const jsonMatch = response.toString().match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error('No valid JSON found in response');
-            }
-
-            const parsedResponse: ResumeAnalysis = JSON.parse(jsonMatch[0]);
-            return parsedResponse;
-        } catch (error) {
-            console.error('Error parsing AI response:', error);
-            return {
-                personalInfo: {
-                    name: '',
-                    email: '',
-                    phone: '',
-                    location: '',
-                    linkedin: '',
-                    portfolio: '',
-                },
-                professionalSummary: 'Unable to parse resume. Please check the format.',
-                skills: {
-                    technical: [],
-                    soft: [],
-                    tools: [],
-                    languages: [],
-                },
-                experience: [],
-                education: [],
-                projects: [],
-                certifications: [],
-                achievements: [],
-                strengths: [],
-                weaknesses: ['Unable to analyze resume'],
-                suggestedImprovements: ['Please ensure resume is in a standard format'],
-                overallScore: 0,
-            };
-        }
-    }
+};
